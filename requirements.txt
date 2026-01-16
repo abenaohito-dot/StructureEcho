@@ -1,6 +1,5 @@
 streamlit
 rdkit
 requests
-tensorflow-cpu
-tf-keras
-STOUT-smiles @ https://github.com/Kohulan/STOUT/archive/master.zip
+tensorflow-cpu==2.12.0
+STOUT-pypi
