@@ -3,4 +3,4 @@ rdkit
 requests
 tensorflow-cpu
 tf-keras
-stout-smiles
+stout-smiles @ git+https://github.com/Kohulan/STOUT.git
