@@ -1,6 +1,6 @@
 streamlit
 rdkit
 requests
-tensorflow
+tensorflow-cpu
 tf-keras
-STOUT-smiles
+stout-smiles
