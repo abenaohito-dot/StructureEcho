@@ -6,13 +6,12 @@ from rdkit import Chem
 from rdkit.Chem import Draw
 
 # --- 1. システム・環境設定 ---
-# AIエンジンが古いKerasを要求するため設定
 os.environ['TF_USE_LEGACY_KERAS'] = '1'
 
-@st.cache_resource
+# 修正ポイント：1.11.0では cache_resource の代わりに experimental_singleton を使用
+@st.experimental_singleton
 def load_stout_engine():
     try:
-        # tensorflow-cpu==2.12.0環境でのロード
         import tensorflow as tf
         from STOUT import translate_forward
         return translate_forward
@@ -21,17 +20,15 @@ def load_stout_engine():
 
 # --- 2. 解析・可視化ロジック ---
 def show_structure(smiles):
-    """SMILESから構造式画像を生成"""
     mol = Chem.MolFromSmiles(smiles)
     if mol:
-        # 旧バージョン互換のため use_column_width を使用
         img = Draw.MolToImage(mol, size=(500, 500))
+        # 修正ポイント：use_container_width ではなく 旧式の use_column_width
         st.image(img, use_column_width=True)
         return True
     return False
 
 def fetch_pubchem_all(smiles):
-    """PubChemからIUPAC名、慣用名、CIDを取得"""
     try:
         url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/{requests.utils.quote(smiles)}/property/IUPACName/JSON"
         r = requests.get(url, timeout=5)
@@ -39,20 +36,17 @@ def fetch_pubchem_all(smiles):
             data = r.json()['PropertyTable']['Properties'][0]
             cid = data.get('CID')
             iupac = data.get('IUPACName')
-            
             syn_url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/synonyms/JSON"
             rs = requests.get(syn_url, timeout=5)
             common = iupac
             if rs.status_code == 200:
                 common = rs.json()['InformationList']['Information'][0]['Synonym'][0]
-            
             return {"iupac": iupac, "common": common, "cid": cid}
         return None
     except:
         return "error"
 
 # --- 3. UI 構築 ---
-# バージョン固定のため、できるだけシンプルな設定に
 st.set_page_config(page_title="StructureEcho", layout="centered")
 
 st.markdown("""
@@ -70,28 +64,21 @@ st.caption("MOLECULAR NOMENCLATURE INTELLIGENCE")
 
 stout_model = load_stout_engine()
 
-# クラウド互換性のため radio に変更 (segmented_controlは1.40以降のため)
-mode = st.radio(
-    "SEARCH ENGINE",
-    options=["DATABASE", "AI INFERENCE"],
-    horizontal=True
-)
+# 修正ポイント：segmented_control は radio に
+mode = st.radio("SEARCH ENGINE", options=["DATABASE", "AI INFERENCE"], horizontal=True)
 
 smiles_input = st.text_input("SMILES String", placeholder="e.g. C1=CC=CC=C1")
 
 if smiles_input:
     col1, col2 = st.columns([1, 1.2])
-    
     with col1:
         st.markdown("##### Structure View")
         valid = show_structure(smiles_input)
-    
     with col2:
         st.markdown("##### Analysis Result")
         if not valid:
             st.error("Invalid SMILES format.")
         else:
-            # 旧バージョン互換のため use_column_width=True
             if st.button("RUN ANALYSIS", type="primary"):
                 with st.spinner("Analyzing..."):
                     if mode == "DATABASE":
@@ -134,5 +121,6 @@ with st.sidebar:
         st.success("STOUT: READY")
     else:
         st.warning("STOUT: LOADING")
-    st.divider()
-    st.caption("Ver. 3.4.1 (Cloud Optimized)")
+    # 修正ポイント：st.divider() ではなく markdown の水平線
+    st.markdown("---")
+    st.caption("Ver. 3.4.2 (Cloud Final)")
